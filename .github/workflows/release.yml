@@ -15,9 +15,11 @@ jobs:
     steps:      
       - name: Set build date        
         id: set_date        
-        run:  |          
-          echo "datedash=$(date +%Y-%m-%d-%H%M%S)" >> $GITHUB_OUTPUT           
-          echo "date=$(echo $datedash | sed 's|\-||g')" >> $GITHUB_OUTPUT   
+        run: |          
+          DATEDASH=$(date +%Y-%m-%d-%H%M%S)
+          DATE=$(echo $DATEDASH | sed 's/-//g')
+          echo "datedash=$DATEDASH" >> $GITHUB_OUTPUT 
+          echo "date=$DATE" >> $GITHUB_OUTPUT   
 
   build:    
     strategy:      
