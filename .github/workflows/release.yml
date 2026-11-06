@@ -22,7 +22,6 @@ jobs:
   build:
     strategy:
       matrix:
-        #version: [r36s-bookworm-minimal, r36s-jammy-minimal, r36s-noble-minimal, r36s-plucky-minimal, r36s-bookworm-xfce, r36s-jammy-xfce, r36s-noble-xfce, r36s-plucky-xfce]
         device: [r36s]
         os: [bookworm, jammy, noble, plucky]
         type: [minimal, xfce]
@@ -40,17 +39,17 @@ jobs:
           haskell: true
           large-packages: true
           docker-images: true
-      #     swap-storage: true
 
-      - uses: thejerrybao/setup-swap-space@v1
-        with:
-          swap-space-path: /swapfile
-          swap-size-gb:  8
-          remove-existing-swap-files: false
-          
+      - name: Set up Swap Space
+        run: |
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
       - uses: actions/checkout@v4
-      -
-        name: Set up QEMU
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Prep
