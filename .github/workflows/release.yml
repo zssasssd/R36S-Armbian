@@ -1,83 +1,83 @@
 # This is a basic workflow to help you get started with Actions
 
 name: release Armbian
-on:
+on:  
   workflow_dispatch:
-env:
-    GH_TOKEN: ${{ github.token }}
+env:    
+  GH_TOKEN: ${{ github.token }}
 
-jobs:
-  get_build_date:
-    runs-on: ubuntu-latest
-    outputs:
-      build_datedash: ${{ steps.set_date.outputs.datedash }}
-      build_date: ${{ steps.set_date.outputs.date }}
-    steps:
-      - name: Set build date
-        id: set_date
-        run:  |
-          echo "datedash=$(date +%Y-%m-%d-%H%M%S)" >> $GITHUB_OUTPUT 
-          echo "date=$(echo $datedash | sed 's|\-||g')" >> $GITHUB_OUTPUT 
+jobs:  
+  get_build_date:    
+    runs-on: ubuntu-latest    
+    outputs:      
+      build_datedash: ${{ steps.set_date.outputs.datedash }}      
+      build_date: ${{ steps.set_date.outputs.date }}    
+    steps:      
+      - name: Set build date        
+        id: set_date        
+        run:  |          
+          echo "datedash=$(date +%Y-%m-%d-%H%M%S)" >> $GITHUB_OUTPUT           
+          echo "date=$(echo $datedash | sed 's|\-||g')" >> $GITHUB_OUTPUT   
 
-  build:
-    strategy:
-      matrix:
-        device: [r36s]
-        os: [bookworm, jammy, noble, plucky]
-        type: [minimal, xfce]
-      fail-fast: false
-    runs-on: ubuntu-latest
-    needs: get_build_date
-    steps:
-
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
+  build:    
+    strategy:      
+      matrix:        
+        device: [r36s]        
+        os: [bookworm, jammy, noble, plucky]        
+        type: [minimal, xfce]      
+      fail-fast: false    
+    runs-on: ubuntu-latest    
+    needs: get_build_date    
+    steps:      
+      - name: Free Disk Space (Ubuntu)        
+        uses: jlumbroso/free-disk-space@main        
+        with:          
+          tool-cache: true          
+          android: true          
+          dotnet: true          
+          haskell: true          
+          large-packages: true          
           docker-images: true
 
       - name: Set up Swap Space
-        run: |
-          sudo fallocate -l 8G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+        run: |          
+          sudo fallocate -l 8G /swapfile          
+          sudo chmod 600 /swapfile          
+          sudo mkswap /swapfile          
+          sudo swapon /swapfile          
           free -h
 
-      - uses: actions/checkout@v4
-      - name: Set up QEMU
+      - uses: actions/checkout@v4      
+      
+      - name: Set up QEMU        
         uses: docker/setup-qemu-action@v3
 
-      - name: Prep
-        run: |
-          export LatestArmbianVer=$(gh release list -R armbian/build |grep -v trunk | head -n1 |cut -f1)
-          export LatestArmbianURL=https://github.com/armbian/build/archive/refs/tags/${LatestArmbianVer}.tar.gz
-          echo LatestArmbianURL=$LatestArmbianURL
-          wget -q -nv "$LatestArmbianURL" -O${LatestArmbianVer}.tar.gz
-          tar --strip-components=1 -xf ${LatestArmbianVer}.tar.gz
-          rm -f ${LatestArmbianVer}.tar.gz
+      - name: Prep        
+        run: |          
+          export LatestArmbianVer=$(gh release list -R armbian/build |grep -v trunk | head -n1 |cut -f1)          
+          export LatestArmbianURL=https://github.com/armbian/build/archive/refs/tags/${LatestArmbianVer}.tar.gz          
+          echo LatestArmbianURL=$LatestArmbianURL          
+          wget -q -nv "$LatestArmbianURL" -O${LatestArmbianVer}.tar.gz          
+          tar --strip-components=1 -xf ${LatestArmbianVer}.tar.gz          
+          rm -f ${LatestArmbianVer}.tar.gz          
           mkdir release
 
-      - name: Build armbian-${{ matrix.device }}-${{ matrix.os }}-${{ matrix.type }}.img
-        run: |
-          image=${{ matrix.device }}-${{ matrix.os }}-${{ matrix.type }}
-          sleep $(( RANDOM % 300 ))
-          ./compile.sh ${image} || exit 1
-          find output -name "*.img" -exec cp -vf {} release/armbian-${image}.img \;
-          
-      - name: Compress armbian-${{ matrix.device }}-${{ matrix.os }}-${{ matrix.type }}.img
-        run: |
-          find release -name "*.img" -exec xz -vz -T0 -6 --extreme {} \;
+      - name: Build armbian-${{ matrix.device }}-${{ matrix.os }}-${{ matrix.type }}.img        
+        run: |          
+          image=${{ matrix.device }}-${{ matrix.os }}-${{ matrix.type }}          
+          sleep $(( RANDOM % 300 ))          
+          ./compile.sh ${image} || exit 1          
+          find output -name "*.img" -exec cp -vf {} release/armbian-${image}.img \;          
+
+      - name: Compress armbian-${{ matrix.device }}-${{ matrix.os }}-${{ matrix.type }}.img        
+        run: |          
+          find release -name "*.img" -exec xz -vz -T0 -6 --extreme {} \;          
           ls release
 
-      - name: Release armbian-${{ matrix.device }}-${{ matrix.os }}-${{ matrix.type }}.img.xz
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release/*.img.xz
-          draft: true
-          name: build ${{ matrix.device }}-${{ needs.get_build_date.outputs.build_datedash }}
+      - name: Release armbian-${{ matrix.device }}-${{ matrix.os }}-${{ matrix.type }}.img.xz        
+        uses: softprops/action-gh-release@v2        
+        with:          
+          files: release/*.img.xz          
+          draft: true          
+          name: build ${{ matrix.device }}-${{ needs.get_build_date.outputs.build_datedash }}          
           tag_name: ${{ matrix.device }}-v${{ needs.get_build_date.outputs.build_date }}
